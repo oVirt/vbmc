@@ -25,15 +25,15 @@
 
 import argparse
 import sys
-import time
 
+import ovirtsdk4
 from ovirtsdk4 import Connection
 from ovirtsdk4 import types
 from pyghmi.ipmi.bmc import Bmc
 
 
 class OvirtBmc(Bmc):
-    def __init__(self, authdata, port, address, vm_name, cache_status, engine_fqdn, engine_username, engine_password):
+    def __init__(self, authdata, port, address, vm, cache_status, engine_fqdn, engine_username, engine_password):
         super().__init__(authdata, port=port, address=address)
         self.ovirt_conn = Connection(
             url=f'https://{engine_fqdn}/ovirt-engine/api',
@@ -43,25 +43,29 @@ class OvirtBmc(Bmc):
         )
         self.vms_service = self.ovirt_conn.system_service().vms_service()
         self.vm = None
+        self.vm_name = None
         self.cache_disabled = not cache_status
         self.cached_status = None
         self.target_status = None
         try:
-            self.vm = self._find_vm(vm_name)
-            if self.vm is not None:
-                self.log(f'Managing vm: {vm_name} ID: {self.vm}')
+            self.vm = self._find_vm(vm)
+            self.vm_name = self.vms_service.service(self.vm).get().name
+            self.log(f'Managing vm: {self.vm_name} ID: {self.vm}')
         except Exception as e:
-            self.log(f'Exception finding vm "{vm_name}": {e}')
+            self.log(f'Exception finding vm "{vm}": {e}')
             sys.exit(1)
 
-    def _find_vm(self, vm_name):
-        vms = (vm for vm in self.vms_service.list() if vm.name == vm_name)
+    def _find_vm(self, vm):
         try:
-            vm_id = next(vms).id
-            return vm_id
-        except StopIteration:
-            self.log(f'Could not find specified vm {vm_name}')
-            sys.exit(1)
+            self.vms_service.service(vm).get()
+            return vm
+        except ovirtsdk4.NotFoundError:
+            vms = self.vms_service.list(search=f'name={vm}')
+            try:
+                return vms[0].id
+            except IndexError:
+                self.log(f'Could not find specified vm {vm}')
+                sys.exit(1)
 
     def get_boot_device(self):
         """Return the currently configured boot device"""
@@ -86,7 +90,7 @@ class OvirtBmc(Bmc):
         else:
             raise Exception(f'Boot device {bootdevice} not supported')
         self.vms_service.service(self.vm).update(vm)
-        self.log('Set boot device to', bootdevice)
+        self.log(f'Set boot device on {self.vm} to {bootdevice}')
 
     def cold_reset(self):
         # Reset of the BMC, not managed system, here we will exit the demo
@@ -120,16 +124,16 @@ class OvirtBmc(Bmc):
         self.target_status = types.VmStatus.DOWN
         if self._vm_up():
             self.vms_service.service(self.vm).stop()
-            self.log(f'Powered off {self.vm}')
+            self.log(f'Powered {self.vm} down')
         else:
-            self.log(f'{self.vm} is already off.')
+            self.log(f'{self.vm} is already down.')
 
     def power_on(self):
         """Start the managed vm"""
         self.target_status = types.VmStatus.UP
         if not self._vm_up():
             self.vms_service.service(self.vm).start()
-            self.log(f'Powered on {self.vm}')
+            self.log(f'Powered {self.vm} up')
         else:
             self.log(f'{self.vm} is already up.')
 
@@ -142,7 +146,7 @@ class OvirtBmc(Bmc):
         # should attempt a clean shutdown
         self.target_status = types.VmStatus.DOWN
         self.vms_service.service(self.vm).shutdown()
-        self.log(f'Politely shut down {self.vm}')
+        self.log(f'Politely shut {self.vm} down')
 
     def log(self, *msg):
         """Helper function that prints msg and flushes stdout"""
@@ -157,7 +161,7 @@ def main():
     )
     parser.add_argument('--port', dest='port', type=int, default=623, help='Port to listen on; defaults to 623')
     parser.add_argument('--address', dest='address', default='::', help='Address to bind to; defaults to ::')
-    parser.add_argument('--vm-name', dest='vm_name', required=True, help='The name of the oVirt vm to manage')
+    parser.add_argument('--vm', dest='vm', required=True, help='The id or name of the oVirt vm to manage')
     parser.add_argument(
         '--cache-status',
         dest='cache_status',
@@ -192,7 +196,7 @@ def main():
         {'admin': 'password'},
         port=args.port,
         address=address,
-        vm_name=args.vm_name,
+        vm=args.vm,
         cache_status=args.cache_status,
         engine_fqdn=args.engine_fqdn,
         engine_username=args.engine_username,
