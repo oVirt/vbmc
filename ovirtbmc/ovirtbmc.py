@@ -50,7 +50,7 @@ class OvirtBmc(Bmc):
         try:
             self.vm = self._find_vm(vm)
             self.vm_name = self.vms_service.service(self.vm).get().name
-            self.log(f'Managing vm: {self.vm_name} ID: {self.vm}')
+            self.log(f'Managing vm {self.vm_name} ({self.vm})')
         except Exception as e:
             self.log(f'Exception finding vm "{vm}": {e}')
             sys.exit(1)
@@ -90,7 +90,7 @@ class OvirtBmc(Bmc):
         else:
             raise Exception(f'Boot device {bootdevice} not supported')
         self.vms_service.service(self.vm).update(vm)
-        self.log(f'Set boot device on {self.vm} to {bootdevice}')
+        self.log(f'Set boot device on {self.vm_name} ({self.vm}) to {bootdevice}')
 
     def cold_reset(self):
         # Reset of the BMC, not managed system, here we will exit the demo
@@ -115,7 +115,7 @@ class OvirtBmc(Bmc):
     def get_power_state(self):
         """Returns the current power state of the managed vm"""
         state = self._vm_up()
-        self.log(f'Reporting power state "{state}" for vm {self.vm}')
+        self.log(f'Reporting power state "{state}" for vm {self.vm_name} ({self.vm})')
         return state
 
     def power_off(self):
@@ -124,18 +124,18 @@ class OvirtBmc(Bmc):
         self.target_status = types.VmStatus.DOWN
         if self._vm_up():
             self.vms_service.service(self.vm).stop()
-            self.log(f'Powered {self.vm} down')
+            self.log(f'Powered {self.vm_name} ({self.vm}) down')
         else:
-            self.log(f'{self.vm} is already down.')
+            self.log(f'{self.vm_name} ({self.vm}) is already down.')
 
     def power_on(self):
         """Start the managed vm"""
         self.target_status = types.VmStatus.UP
         if not self._vm_up():
             self.vms_service.service(self.vm).start()
-            self.log(f'Powered {self.vm} up')
+            self.log(f'Powered {self.vm_name} ({self.vm}) up')
         else:
-            self.log(f'{self.vm} is already up.')
+            self.log(f'{self.vm_name} ({self.vm}) is already up.')
 
     def power_reset(self):
         """Not implemented"""
@@ -146,7 +146,7 @@ class OvirtBmc(Bmc):
         # should attempt a clean shutdown
         self.target_status = types.VmStatus.DOWN
         self.vms_service.service(self.vm).shutdown()
-        self.log(f'Politely shut {self.vm} down')
+        self.log(f'Politely shut {self.vm_name} ({self.vm}) down')
 
     def log(self, *msg):
         """Helper function that prints msg and flushes stdout"""
