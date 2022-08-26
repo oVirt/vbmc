@@ -46,17 +46,13 @@ class OvirtBmc(Bmc):
         self.cache_disabled = not cache_status
         self.cached_status = None
         self.target_status = None
-        # At times the bmc service is started before important things like networking have fully initialized. Keep
-        # trying to find the vm indefinitely, since there's no point in continuing if we don't have an vm.
-        while True:
-            try:
-                self.vm = self._find_vm(vm_name)
-                if self.vm is not None:
-                    self.log(f'Managing vm: {vm_name} ID: {self.vm}')
-                    break
-            except Exception as e:
-                self.log(f'Exception finding vm "{vm_name}": {e}')
-                time.sleep(1)
+        try:
+            self.vm = self._find_vm(vm_name)
+            if self.vm is not None:
+                self.log(f'Managing vm: {vm_name} ID: {self.vm}')
+        except Exception as e:
+            self.log(f'Exception finding vm "{vm_name}": {e}')
+            sys.exit(1)
 
     def _find_vm(self, vm_name):
         vms = (vm for vm in self.vms_service.list() if vm.name == vm_name)
