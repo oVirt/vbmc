@@ -68,7 +68,7 @@ class OvirtBmc(Bmc):
         vm = self.vms_service.service(self.vm).get()
         retval = vm.os.boot.devices[0]
         self.log('Reporting boot device', retval)
-        return retval
+        return str(retval)
 
     def set_boot_device(self, bootdevice):
         """Set the boot device for the managed vm
