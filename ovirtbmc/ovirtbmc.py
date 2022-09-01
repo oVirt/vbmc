@@ -108,7 +108,7 @@ class OvirtBmc(Bmc):
 
         vm_is_up = self.cached_status == types.VmStatus.UP
         vm_is_powering_up = (
-            self.cached_status == types.VmStatus.POWERING_UP or self.cached_status == types.VmStatus.REBOOTING
+            self.cached_status == types.VmStatus.POWERING_UP or self.cached_status == types.VmStatus.REBOOT_IN_PROGRESS
         )
 
         return vm_is_up or vm_is_powering_up
