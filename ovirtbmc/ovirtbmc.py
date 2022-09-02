@@ -23,7 +23,6 @@
 # ipmitool -I lanplus -U admin -P password -H 127.0.0.1 chassis bootdev pxe|disk|cdrom
 # ipmitool -I lanplus -U admin -P password -H 127.0.0.1 mc reset cold
 
-import argparse
 import sys
 
 import ovirtsdk4
@@ -153,58 +152,3 @@ class OvirtBmc(Bmc):
         """Helper function that prints msg and flushes stdout"""
         print(' '.join(msg))
         sys.stdout.flush()
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        prog='ovirtbmc',
-        description='Virtual BMC for controlling oVirt vm',
-    )
-    parser.add_argument('--port', dest='port', type=int, default=623, help='Port to listen on; defaults to 623')
-    parser.add_argument('--address', dest='address', default='::', help='Address to bind to; defaults to ::')
-    parser.add_argument('--vm', dest='vm', required=True, help='The id or name of the oVirt vm to manage')
-    parser.add_argument(
-        '--cache-status',
-        dest='cache_status',
-        default=False,
-        action='store_true',
-        help='Cache the status of the managed vm. This can reduce load on the host, but if the vm status is changed '
-        'outside the BMC then it may become out of sync.',
-    )
-    parser.add_argument(
-        '--engine-fqdn',
-        dest='engine_fqdn',
-        required=True,
-        help='Engine FQDN',
-    )
-    parser.add_argument(
-        '--engine-username',
-        dest='engine_username',
-        default='admin@internal',
-        help='Engine username; defaults to admin@internal',
-    )
-    parser.add_argument(
-        '--engine-password',
-        dest='engine_password',
-        default='123456',
-        help='Engine password; defaults to 123456',
-    )
-
-    args = parser.parse_args()
-    # Default to ipv6 format, but use the appropriate format for ipv4 address.
-    address = args.address if ':' in args.address else f'::ffff:{args.address}'
-    mybmc = OvirtBmc(
-        {'admin': 'password'},
-        port=args.port,
-        address=address,
-        vm=args.vm,
-        cache_status=args.cache_status,
-        engine_fqdn=args.engine_fqdn,
-        engine_username=args.engine_username,
-        engine_password=args.engine_password,
-    )
-    mybmc.listen()
-
-
-if __name__ == '__main__':
-    main()
