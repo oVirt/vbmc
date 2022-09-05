@@ -14,8 +14,13 @@
 # limitations under the License.
 
 import argparse
+import logging
+import os
 
 from ovirtbmc import ovirtbmc
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def main(args):
@@ -25,7 +30,8 @@ def main(args):
     )
     parser.add_argument('--port', dest='port', type=int, default=623, help='Port to listen on; defaults to 623')
     parser.add_argument('--address', dest='address', default='::', help='Address to bind to; defaults to ::')
-    parser.add_argument('--vm', dest='vm', required=True, help='The id or name of the oVirt vm to manage')
+    parser.add_argument('--vm', dest='vm', help='The id or name of the oVirt vm to manage')
+    parser.add_argument('--vm-inventory', dest='vm_inventory', help='A file containing a list of vms\' ids or names to manage')
     parser.add_argument(
         '--cache-status',
         dest='cache_status',
@@ -54,18 +60,46 @@ def main(args):
     )
 
     args = parser.parse_args(args=args)
+
+    if args.vm is None and args.vm_inventory is None:
+        parser.error('You need to pass a single VM via --vm or a file with list of VMs via --vm-inventory')
+
+    port = args.port
+
+    if args.vm_inventory:
+        with open(args.vm_inventory) as inventory:
+            for vm in inventory:
+                vm = vm.strip()
+                res = os.fork()
+                if res == 0:
+                    LOGGER.debug(f"Child running for {vm} on {port}")
+                    break
+                elif res > 0:
+                    port += 1
+                else:
+                    raise RuntimeException("Fork failed")
+            else:
+                LOGGER.debug("Parent process waiting on children")
+                try:
+                    while True:
+                        os.wait()
+                except ChildProcessError:
+                    pass
+                LOGGER.debug("All children finished")
+                return 0
+    else:
+        vm = args.vm
+
     # Default to ipv6 format, but use the appropriate format for ipv4 address.
     address = args.address if ':' in args.address else f'::ffff:{args.address}'
     mybmc = ovirtbmc.OvirtBmc(
         {'admin': 'password'},
-        port=args.port,
+        port=port,
         address=address,
-        vm=args.vm,
+        vm=vm,
         cache_status=args.cache_status,
         engine_fqdn=args.engine_fqdn,
         engine_username=args.engine_username,
         engine_password=args.engine_password,
     )
     mybmc.listen()
-
-
