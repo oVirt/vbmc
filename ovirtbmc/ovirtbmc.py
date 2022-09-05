@@ -99,7 +99,7 @@ class OvirtBmc(Bmc):
 
     def _vm_up(self):
         no_cached_data = self.cached_status is None
-        vm_changing_state = self.cached_status != self.target_status
+        vm_changing_state = self.target_status is not None and self.cached_status != self.target_status
 
         if no_cached_data or vm_changing_state or self.cache_disabled:
             vm = self.vms_service.service(self.vm_id).get()
