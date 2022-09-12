@@ -65,8 +65,6 @@ def main(args):
         parser.error('You need to pass a single VM via --vm or a file with list of VM, address, port via --vm-inventory')
 
     port = args.port
-    # Default to ipv6 format, but use the appropriate format for ipv4 address.
-    address = args.address if ':' in args.address else f'::ffff:{args.address}'
 
     if args.vm_inventory:
         with open(args.vm_inventory) as inventory:
@@ -97,6 +95,12 @@ def main(args):
                 return 0
     else:
         vm = args.vm
+        address = args.address
+        port = args.port
+
+    # Default to ipv6 format, but use the appropriate format for ipv4 address.
+    if ':' not in address:
+        address = f'::ffff:{address}'
 
     mybmc = ovirtbmc.OvirtBmc(
         {'admin': 'password'},
