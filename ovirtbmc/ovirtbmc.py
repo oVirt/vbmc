@@ -48,7 +48,7 @@ class OvirtBmc(Bmc):
         self.target_status = None
         try:
             self.vm_id, self.vm_name = self._find_vm(vm)
-            self.log(f'Managing vm {self.vm_name} ({self.vm_id}) on port {port}')
+            self.log(f'Managing vm {self.vm_name} ({self.vm_id}) on {address}:{port}')
         except Exception as e:
             self.log(f'Exception finding vm "{vm}": {e}')
             sys.exit(1)
