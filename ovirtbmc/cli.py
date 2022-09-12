@@ -64,8 +64,6 @@ def main(args):
     if args.vm is None and args.vm_inventory is None:
         parser.error('You need to pass a single VM via --vm or a file with list of VM, address, port via --vm-inventory')
 
-    port = args.port
-
     if args.vm_inventory:
         with open(args.vm_inventory) as inventory:
             for line in inventory:
@@ -78,7 +76,7 @@ def main(args):
                     raise RuntimeError("Invalid inventory")
                 res = os.fork()
                 if res == 0:
-                    LOGGER.debug(f"Child running for {vm} on {port}")
+                    LOGGER.debug(f"Child running for {vm} on {address}:{port}")
                     break
                 elif res > 0:
                     pass
