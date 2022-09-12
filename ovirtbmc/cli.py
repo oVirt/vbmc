@@ -71,7 +71,7 @@ def main(args):
                     vm_addr_port = line.split(',')
                     vm = vm_addr_port[0].strip()
                     address = vm_addr_port[1].strip()
-                    port = vm_addr_port[2].strip()
+                    port = int(vm_addr_port[2].strip())
                 except IndexError:
                     raise RuntimeError("Invalid inventory")
                 res = os.fork()
